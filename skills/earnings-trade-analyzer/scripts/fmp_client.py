@@ -28,6 +28,8 @@ except ImportError:
 
 
 # --- FMP endpoint fallback: stable (new users) -> v3 (legacy users) ---
+from _fmp_compat import v3_to_stable  # v3->stable patch 2026-05-22
+
 
 
 def _stable_hist_url(base, symbols_str, params):
@@ -142,6 +144,7 @@ class FMPClient:
         self, url: str, params: Optional[dict] = None, quiet: bool = False
     ) -> Optional[dict]:
         """Execute a rate-limited GET request with budget enforcement."""
+        url, params = v3_to_stable(url, params)  # v3->stable patch 2026-05-22
         if self.rate_limit_reached:
             return None
 

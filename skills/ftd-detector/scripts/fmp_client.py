@@ -26,6 +26,8 @@ except ImportError:
 
 
 # --- FMP endpoint fallback: stable (new users) -> v3 (legacy users) ---
+from _fmp_compat import v3_to_stable  # v3->stable patch 2026-05-22
+
 
 
 def _stable_quote_url(base, symbols_str, params):
@@ -145,6 +147,7 @@ class FMPClient:
     def _rate_limited_get(
         self, url: str, params: Optional[dict] = None, quiet: bool = False
     ) -> Optional[dict]:
+        url, params = v3_to_stable(url, params)  # v3->stable patch 2026-05-22
         if self.rate_limit_reached:
             return None
 
