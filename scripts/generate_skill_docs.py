@@ -196,11 +196,16 @@ def parse_api_requirements(claude_md: Path) -> dict[str, dict]:
         if name in ("Skill", "-------", ""):
             continue
         slug = _slugify(name)
+        notes = cols[5] if len(cols) > 5 else ""
         result[slug] = {
             "fmp": cols[2],
             "finviz": cols[3],
             "alpaca": cols[4],
-            "notes": cols[5] if len(cols) > 5 else "",
+            "notes": notes,
+            # The matrix has no Robinhood column (FMP/FINVIZ/Alpaca only); a
+            # Robinhood broker requirement is surfaced in the Notes column, so
+            # derive a required flag from it to badge such skills correctly.
+            "robinhood": "Required" if "Robinhood" in notes else "",
         }
     return result
 
@@ -272,6 +277,10 @@ def api_badges(api_info: dict | None) -> str:
         badges.append('<span class="badge badge-api">Alpaca Required</span>')
         has_required = True
 
+    if "Required" in api_info.get("robinhood", ""):
+        badges.append('<span class="badge badge-api">Robinhood Required</span>')
+        has_required = True
+
     if not badges:
         badges.append('<span class="badge badge-free">No API</span>')
     elif not has_required:
@@ -305,6 +314,10 @@ def api_badges_ja(api_info: dict | None) -> str:
 
     if "Required" in alpaca:
         badges.append('<span class="badge badge-api">Alpaca必須</span>')
+        has_required = True
+
+    if "Required" in api_info.get("robinhood", ""):
+        badges.append('<span class="badge badge-api">Robinhood必須</span>')
         has_required = True
 
     if not badges:

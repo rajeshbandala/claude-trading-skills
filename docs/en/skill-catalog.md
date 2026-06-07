@@ -92,6 +92,7 @@ A comprehensive catalog of all 55 Claude Trading Skills organized by category. B
 | Skill | Description | API Requirements |
 |-------|-------------|-----------------|
 | **Portfolio Manager** | Portfolio analysis with Alpaca MCP Server integration. Asset allocation, sector diversification, risk metrics, HOLD/ADD/TRIM/SELL recommendations, rebalancing plans | <span class="badge badge-api">Alpaca Required</span> |
+| **[Robinhood Portfolio Manager]({{ '/en/skills/robinhood-portfolio-manager/' | relative_url }})** | Portfolio analysis with Robinhood MCP Server integration. Asset allocation, diversification, risk metrics, HOLD/ADD/TRIM/SELL recommendations, rebalancing plans, plus optional confirm-first (one-order-at-a-time) execution | <span class="badge badge-api">Robinhood Required</span> |
 | **[Trader Memory Core]({{ '/en/skills/trader-memory-core/' | relative_url }})** | Persistent thesis lifecycle tracker: register screener outputs as IDEA, manage state transitions through ENTRY_READY → ACTIVE → CLOSED, attach position sizing, schedule reviews, and generate postmortem reports with MAE/MFE | <span class="badge badge-optional">FMP Optional</span> |
 | **[Trade Performance Coach]({{ '/en/skills/trade-performance-coach/' | relative_url }})** | Post-trade coach: reviews closed trades, partial exits, and monthly aggregates across 5 axes (process, risk, execution, behavior patterns, review quality), emits OK/WARN/REVIEW_REQUIRED/RULE_VIOLATION/COOL_DOWN verdict and next-session operating rules with human decision gate. Beta. | <span class="badge badge-free">No API</span> |
 | **[Position Sizer]({{ '/en/skills/position-sizer/' | relative_url }})** | Risk-based position sizing using Fixed Fractional, ATR-based, and Kelly Criterion methods. Portfolio constraints (max position %, max sector %). Works offline | <span class="badge badge-free">No API</span> |
@@ -256,5 +257,6 @@ A comprehensive catalog of all 55 Claude Trading Skills organized by category. B
 | Parabolic Short Trade Planner | -- | -- | -- |
 | Trading Skills Navigator | -- | -- | -- |
 | Trade Performance Coach | -- | -- | -- |
+| Robinhood Portfolio Manager | -- | -- | -- |
 
 "--" means not required. "Optional" means functionality is enhanced but the skill works without it.

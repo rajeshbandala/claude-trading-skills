@@ -173,6 +173,13 @@ jobs:
           --cov-report=term-missing
           --cov-append
 
+      - name: Test robinhood-portfolio-manager
+        run: >
+          python -m pytest skills/robinhood-portfolio-manager/scripts/tests/ -v
+          --cov=skills/robinhood-portfolio-manager/scripts
+          --cov-report=term-missing
+          --cov-append
+
       - name: Test repo-level scripts
         run: >
           python -m pytest scripts/tests/ -v
