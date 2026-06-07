@@ -68,10 +68,10 @@ This skill requires a Robinhood MCP Server to be configured and connected. The M
 **MCP Server Tools Used (logical names):**
 
 Read tools (analysis):
-- `get_accounts` - List brokerage accounts and identifiers
-- `get_portfolio` - Total portfolio/account value and cash balances
-- `get_equity_positions` - All current equity positions (symbol, quantity, average cost, market value)
-- `get_equity_quotes` - Live quotes for held and candidate symbols
+- `get_accounts` - List brokerage accounts (returns `account_number`, `brokerage_account_type`, `type`, `nickname`, `is_default`, `agentic_allowed`)
+- `get_portfolio` - Total value, cash, and buying power for one account (needs `account_number`)
+- `get_equity_positions` - Open equity positions for one account: `symbol`, `quantity`, `average_buy_price`, `shares_available_for_sells`, `intraday_quantity`, `type` (no market price — pair with `get_equity_quotes`)
+- `get_equity_quotes` - Live quotes + official last-session close for up to ~20 symbols per call
 - `get_equity_orders` - Existing/open and historical orders (used to reconcile stops and pending trades)
 - `get_equity_tradability` - Whether a symbol is currently tradable
 
@@ -94,11 +94,8 @@ If the Robinhood MCP Server is not connected, inform the user and provide setup 
 ## 4. Quick Start
 
 ```bash
-Use get_accounts and get_portfolio to fetch:
-- Account identifier(s)
-- Total portfolio/account value
-- Cash balance and buying power
-- Account status
+Call get_accounts. It returns data.accounts[] with account_number,
+brokerage_account_type, type (margin/cash), nickname, is_default, agentic_allowed.
 ```
 
 ---
@@ -107,34 +104,52 @@ Use get_accounts and get_portfolio to fetch:
 
 ### Step 1: Fetch Portfolio Data via Robinhood MCP
 
-Use the Robinhood MCP Server tools to gather current portfolio information:
+Use the Robinhood MCP Server tools to gather current portfolio information. Every
+read tool returns a `{"data": {...}, "guide": "..."}` envelope — read from `data`
+and follow any `guide` instructions the server includes.
 
-**1.1 Get Account Information:**
+**1.0 Select the account (required before any per-account call):**
 ```
-Use get_accounts and get_portfolio to fetch:
-- Account identifier(s)
-- Total portfolio/account value
-- Cash balance and buying power
-- Account status
+Call get_accounts. It returns data.accounts[] with account_number,
+brokerage_account_type, type (margin/cash), nickname, is_default, agentic_allowed.
 ```
+- If exactly one account exists, use it.
+- If multiple accounts exist, **present them and ask the user to choose** — never
+  silently default. `get_equity_positions` / `get_portfolio` require the chosen
+  `account_number`.
+- When displaying an account number to the user, **mask all but the last 4 digits**
+  (e.g. `••••0794`); pass the full unmasked value to the tools.
+- Sort for display: default first, then `agentic_allowed=true`, then other
+  individual, then retirement.
 
-**1.2 Get Current Positions:**
-```
-Use get_equity_positions to fetch all holdings:
-- Symbol ticker
-- Quantity held (supports fractional shares)
-- Average entry price (cost basis)
-- Current market value
-- Unrealized P&L ($ and %)
-- Position size as % of portfolio
-```
+**1.1 Get Account Value and Cash (`get_portfolio`, with `account_number`):**
+Read from `data`:
+- `total_value` — account/portfolio value
+- `cash` — cash balance
+- `buying_power.buying_power` — authoritative spendable figure (use for affordability)
+- `equity_value`, `options_value`, `crypto_value`, … — asset-class breakdown
+  (zero-value classes can be omitted from display)
+- `currency` / `buying_power.display_currency`
 
-**1.3 Enrich with Live Quotes:**
+**1.2 Get Current Positions (`get_equity_positions`, with `account_number`):**
+Read `data.positions[]`; each position has:
+- `symbol`, `quantity` (fractional supported), `type` (usually `long`)
+- `average_buy_price` — average cost per share as shown in the Robinhood app
+  (already reflects partial sells; **may be omitted** while a position reconciles)
+- `shares_available_for_sells` — **use this for sellable shares, not `quantity`**
+- `intraday_quantity` — yesterday's quantity = `quantity - intraday_quantity`
+- **No market price or P&L is included** — compute those in Step 1.3.
+- Paginate: if the response includes a `next` cursor, pass it back via `cursor`
+  until all positions are retrieved.
+
+**1.3 Enrich with Live Quotes (`get_equity_quotes`):**
 ```
-Use get_equity_quotes for held symbols to obtain:
-- Current price (for positions where market value is stale or missing)
-- Bid/ask context for sizing and execution planning
+Call get_equity_quotes with the held symbols (batch in groups of ≤20; above 20
+the closes are omitted and closes_error is set, so chunk the request).
 ```
+For each position compute: market value = `quantity × price`; unrealized P&L =
+`(price − average_buy_price) × quantity` (skip P&L when `average_buy_price` is
+missing); position weight = market value ÷ `total_value`.
 
 > **No portfolio-history endpoint:** Unlike some brokers, the Robinhood MCP
 > surface does not provide a portfolio-history time series. Derive performance
@@ -143,10 +158,10 @@ Use get_equity_quotes for held symbols to obtain:
 > live feed. If the user wants historical return, ask them to supply it manually.
 
 **Data Validation:**
-- Verify all positions have valid ticker symbols
-- Confirm market values sum to approximately the portfolio value from `get_portfolio`
-- Check for any stale or inactive positions
-- Handle edge cases (fractional shares, cash, non-equity holdings if present)
+- Verify all positions have valid ticker symbols and that every held symbol got a quote
+- Confirm computed market values + `cash` sum to approximately `total_value`
+- Treat a missing `average_buy_price` as "cost basis pending" (report value, not P&L)
+- Handle edge cases (fractional shares, cash-only accounts, non-equity holdings)
 
 ### Step 2: Enrich Position Data
 

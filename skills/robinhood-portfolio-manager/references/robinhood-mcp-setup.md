@@ -40,13 +40,25 @@ their **logical base names**; in-session they appear with a server-specific
 prefix (for example `mcp__<server>__get_equity_positions`). The prefix varies by
 environment — do not hardcode it.
 
-### Read tools (analysis)
+All read tools return a `{"data": {...}, "guide": "..."}` envelope — read from
+`data` and honor any `guide` text the server returns.
 
-- **`get_accounts`** — List brokerage accounts and their identifiers.
-- **`get_portfolio`** — Total portfolio/account value and cash balances.
-- **`get_equity_positions`** — All current equity positions: symbol, quantity (fractional supported), average cost, market value, unrealized P&L.
-- **`get_equity_quotes`** — Live quotes (price, bid/ask) for held and candidate symbols.
-- **`get_equity_orders`** — Open and historical orders; used to reconcile stops and detect conflicting pending orders.
+- **`get_accounts`** — List brokerage accounts. Returns `data.accounts[]` with
+  `account_number`, `brokerage_account_type`, `type` (margin/cash), `nickname`,
+  `is_default`, `agentic_allowed`. With multiple accounts, ask the user to choose;
+  mask all but the last 4 digits when displaying, pass the full value to tools.
+- **`get_portfolio`** (needs `account_number`) — `data.total_value`, `cash`,
+  `buying_power.buying_power` (authoritative spendable), and per-asset-class values.
+- **`get_equity_positions`** (needs `account_number`) — `data.positions[]` with
+  `symbol`, `quantity` (fractional supported), `average_buy_price` (avg cost; may
+  be omitted while reconciling), `shares_available_for_sells` (use for sellable
+  shares), `intraday_quantity`, `type`. **No market price/P&L** — pair with
+  `get_equity_quotes`. Paginate via the `next`/`cursor` field.
+- **`get_equity_quotes`** — Live quotes + official last-session close for up to
+  ~20 symbols per call (above 20, closes are omitted with `closes_error` set).
+- **`get_equity_orders`** (needs `account_number`) — Open and historical orders;
+  filter by `state`, `symbol`, `created_at_gte`; used to reconcile stops and
+  detect conflicting pending orders. Paginates via `cursor`.
 - **`get_equity_tradability`** — Whether a given symbol is currently tradable.
 
 ### Order tools (confirm-first execution only)
