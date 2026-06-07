@@ -61,6 +61,20 @@ All read tools return a `{"data": {...}, "guide": "..."}` envelope — read from
   detect conflicting pending orders. Paginates via `cursor`.
 - **`get_equity_tradability`** — Whether a given symbol is currently tradable.
 
+### Watchlist tools (candidate tracking)
+
+- **`get_watchlists`** — List the user's watchlists (each with an `id` and name).
+- **`get_watchlist_items`** (needs `list_id`) — Items in a stock/ETF/crypto/index
+  watchlist (`object_type` distinguishes them). No live prices — pair with
+  `get_equity_quotes`. Do **not** use it for the options watchlist.
+- **`get_options_watchlist`** — The single-leg options watchlist (use this instead
+  of `get_watchlist_items`; multi-leg strategies aren't shown — see the app).
+- **`get_popular_lists`** / **`follow_list`** / **`unfollow_list`** — Curated lists.
+- **`add_to_watchlist`** / **`remove_from_watchlist`** / **`create_watchlist`** /
+  **`update_watchlist`** — Modify stock/crypto/index watchlists (**writes — confirm first**).
+- **`add_option_to_watchlist`** / **`remove_option_from_watchlist`** — Modify the
+  options watchlist (**writes — confirm first**).
+
 ### Order tools (confirm-first execution only)
 
 - **`review_equity_order`** — Dry-run preview of an order (estimated cost/proceeds, fees, buying-power impact) **without placing it**.
@@ -72,6 +86,19 @@ All read tools return a `{"data": {...}, "guide": "..."}` envelope — read from
 > drawdown are therefore unavailable from the live feed. The skill derives
 > performance context from current positions (unrealized P&L vs. cost basis) and
 > labels it accordingly.
+
+> **Equities are the only enumerable positions.** There is **no**
+> `get_option_positions` / `get_option_orders` / `get_crypto_positions` tool on
+> this surface. Options, crypto, futures, etc. appear only as **aggregate dollar
+> values** in `get_portfolio` (`options_value`, `crypto_value`, …) — the skill
+> reports those sleeves by value and % of account, surfaces any tracked contracts
+> via `get_options_watchlist`, flags sleeves >10% as un-enumerated risk, and points
+> the user to the Robinhood app for contract/lot-level detail.
+>
+> Some environments additionally expose `get_option_quotes` / `review_option_order`
+> / `place_option_order`, which operate on individual `option_ids` (e.g. from the
+> options watchlist). They are **environment-dependent** and still do **not** list
+> current option holdings — treat them as optional and never assume their presence.
 
 ## Verification and Testing
 

@@ -40,6 +40,15 @@ ORDER_TOOLS = [
     ("cancel_equity_order", "Cancel an existing order by id"),
 ]
 
+# Watchlist tools. Reads are free; writes mutate user data — confirm first.
+WATCHLIST_TOOLS = [
+    ("get_watchlists", "List the user's watchlists (id + name)"),
+    ("get_watchlist_items", "Items in a stock/ETF/crypto/index watchlist"),
+    ("get_options_watchlist", "The options watchlist (use instead of items)"),
+    ("add_to_watchlist", "Add symbols to a watchlist (write — confirm first)"),
+    ("remove_from_watchlist", "Remove items from a watchlist (write — confirm)"),
+]
+
 SETUP_STEPS = [
     "Configure a Robinhood MCP server in your Claude client's MCP settings.",
     "Complete the server's login / authentication flow (may require MFA).",
@@ -78,6 +87,13 @@ def print_checklist() -> None:
     print("  Order tools (confirm-first execution only):")
     for name, desc in ORDER_TOOLS:
         print(f"    - {name:<24} {desc}")
+    print()
+    print("  Watchlist tools (reads free; writes confirm-first):")
+    for name, desc in WATCHLIST_TOOLS:
+        print(f"    - {name:<24} {desc}")
+    print()
+    print("  Note: equities are the only enumerable positions. Options/crypto")
+    print("  appear only as aggregate values in get_portfolio (no position tool).")
     print()
 
     print(line)

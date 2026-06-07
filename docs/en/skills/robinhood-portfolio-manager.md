@@ -51,7 +51,8 @@ Invoke this skill when the user requests:
 - "Portfolio performance review"
 - "What stocks should I buy or sell?"
 - "Help me place this trade on Robinhood" (triggers the confirm-first execution workflow)
-- Any request involving portfolio-level analysis, management, or guided order placement on Robinhood
+- "Show / update my watchlist" or "track these candidates" (triggers watchlist integration)
+- Any request involving portfolio-level analysis, management, watchlists, or guided order placement on Robinhood
 
 ---
 
@@ -69,11 +70,26 @@ This skill requires a Robinhood MCP Server to be configured and connected. The M
 
 Read tools (analysis):
 - `get_accounts` - List brokerage accounts (returns `account_number`, `brokerage_account_type`, `type`, `nickname`, `is_default`, `agentic_allowed`)
-- `get_portfolio` - Total value, cash, and buying power for one account (needs `account_number`)
+- `get_portfolio` - Total value, cash, buying power, **and per-asset-class aggregates** (`equity_value`, `options_value`, `crypto_value`, `futures_value`, `event_contracts_value`, `mutual_funds_value`, `fixed_income_value`) for one account (needs `account_number`)
 - `get_equity_positions` - Open equity positions for one account: `symbol`, `quantity`, `average_buy_price`, `shares_available_for_sells`, `intraday_quantity`, `type` (no market price — pair with `get_equity_quotes`)
 - `get_equity_quotes` - Live quotes + official last-session close for up to ~20 symbols per call
 - `get_equity_orders` - Existing/open and historical orders (used to reconcile stops and pending trades)
 - `get_equity_tradability` - Whether a symbol is currently tradable
+
+> **Equity-only enumeration:** `get_equity_positions` lists **equities only**.
+> This MCP surface has **no** `get_option_positions` / `get_crypto_positions`
+> tool, so options, crypto, futures, etc. are visible only as the **aggregate
+> dollar values** in `get_portfolio` — never as individual contracts/lots. Report
+> those sleeves by value and % of account, flag them as **un-enumerated risk**,
+> and point the user to the Robinhood app for position-level detail.
+
+Watchlist tools (candidate tracking):
+- `get_watchlists` - List the user's watchlists (returns each list's `id` + name)
+- `get_watchlist_items` - Items in a stock/ETF/crypto/index watchlist (needs `list_id`; no live prices — pair with `get_equity_quotes`)
+- `get_options_watchlist` - The options watchlist (use this, NOT `get_watchlist_items`, for options)
+- `get_popular_lists` - Curated/popular lists the user can follow
+- `add_to_watchlist` / `remove_from_watchlist` / `create_watchlist` / `update_watchlist` - Modify watchlists (writes — confirm before calling)
+- `add_option_to_watchlist` / `remove_option_from_watchlist` - Modify the options watchlist (writes — confirm)
 
 Order tools (confirm-first execution only):
 - `review_equity_order` - Dry-run preview of an order without placing it
@@ -157,6 +173,24 @@ missing); position weight = market value ÷ `total_value`.
 > report that time-weighted historical return / drawdown is unavailable from the
 > live feed. If the user wants historical return, ask them to supply it manually.
 
+**1.4 Look at the options sleeve (and other non-equity sleeves):**
+Whenever `get_portfolio` reports a non-zero `options_value` (or `crypto_value`,
+`futures_value`, …), explicitly surface it instead of silently dropping it:
+- Report the **aggregate dollar value and % of account** from `get_portfolio`.
+- Call `get_options_watchlist` to list any **tracked single-leg option contracts**
+  (each item's `name`, e.g. "Long Call AAPL Jan 2026 $200", and `option_ids`).
+  This is a **watchlist, not holdings** — and multi-leg strategies are not shown.
+- **Held option positions/orders cannot be enumerated** on this MCP surface (there
+  is no `get_option_positions` / `get_option_orders`). State this plainly and point
+  the user to the Robinhood app for contract-level detail (strikes, expiries, P&L).
+  *If the environment exposes `get_option_quotes` / `review_option_order` /
+  `place_option_order`, those work on individual `option_ids` (e.g. from the
+  watchlist) but still do not list current holdings.*
+- **Flag any aggregate-only sleeve >10% of the account as un-enumerated risk** — its
+  leverage, direction, and expiries are invisible and may dominate account risk.
+- Empty options watchlist + `options_value > 0` is normal: it means the user holds
+  options they haven't watchlisted; the value is real but the legs are app-only.
+
 **Data Validation:**
 - Verify all positions have valid ticker symbols and that every held symbol got a quote
 - Confirm computed market values + `cash` sum to approximately `total_value`
@@ -204,6 +238,11 @@ Analyze current allocation across multiple dimensions:
 **By Market Cap:** Large-cap vs Mid-cap vs Small-cap distribution; concentration in mega-caps.
 
 **By Geography:** US vs International vs Emerging Markets; domestic concentration risk.
+
+Always lead with the **multi-asset sleeve breakdown** from `get_portfolio`, so
+non-equity sleeves are never silently dropped. Mark which sleeves this skill can
+analyze at the position level (equities + cash) versus aggregate-only (options,
+crypto, futures, …).
 
 **Output Format:**
 ```markdown

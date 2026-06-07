@@ -609,6 +609,22 @@
       "timeframe": "event-driven"
     },
     {
+      "category": "core-portfolio",
+      "difficulty": "intermediate",
+      "display_name": "Robinhood Portfolio Manager",
+      "id": "robinhood-portfolio-manager",
+      "integrations": [
+        {
+          "id": "robinhood",
+          "requirement": "required",
+          "type": "broker"
+        }
+      ],
+      "status": "production",
+      "summary": "Comprehensive portfolio analysis using Robinhood MCP Server integration to fetch holdings and positions, then analyze asset allocation, risk metrics, individual stock positions, diversification, and generate rebalancing recommendations. Optionally place orders with a strict confirm-first, one-order-at-a-time guardrail.",
+      "timeframe": "weekly"
+    },
+    {
       "category": "strategy-research",
       "difficulty": "advanced",
       "display_name": "Scenario Analyzer",
