@@ -14,11 +14,19 @@ def test_main_returns_zero(capsys):
 
 
 def test_checklist_lists_all_expected_tools(capsys):
-    """Every logical read and order tool name appears in the checklist output."""
+    """Every logical read, order, and watchlist tool name appears in the output."""
     crc.print_checklist()
     out = capsys.readouterr().out
-    for name, _desc in crc.READ_TOOLS + crc.ORDER_TOOLS:
+    for name, _desc in crc.READ_TOOLS + crc.ORDER_TOOLS + crc.WATCHLIST_TOOLS:
         assert name in out
+
+
+def test_checklist_notes_equity_only_position_enumeration(capsys):
+    """The checklist must flag that options/crypto are aggregate-only."""
+    crc.print_checklist()
+    out = capsys.readouterr().out
+    assert "get_watchlists" in out
+    assert "aggregate" in out.lower()
 
 
 def test_order_tools_are_confirm_first_only():

@@ -25,7 +25,8 @@ Invoke this skill when the user requests:
 - "Portfolio performance review"
 - "What stocks should I buy or sell?"
 - "Help me place this trade on Robinhood" (triggers the confirm-first execution workflow)
-- Any request involving portfolio-level analysis, management, or guided order placement on Robinhood
+- "Show / update my watchlist" or "track these candidates" (triggers watchlist integration)
+- Any request involving portfolio-level analysis, management, watchlists, or guided order placement on Robinhood
 
 ## Prerequisites
 
@@ -41,11 +42,26 @@ This skill requires a Robinhood MCP Server to be configured and connected. The M
 
 Read tools (analysis):
 - `get_accounts` - List brokerage accounts (returns `account_number`, `brokerage_account_type`, `type`, `nickname`, `is_default`, `agentic_allowed`)
-- `get_portfolio` - Total value, cash, and buying power for one account (needs `account_number`)
+- `get_portfolio` - Total value, cash, buying power, **and per-asset-class aggregates** (`equity_value`, `options_value`, `crypto_value`, `futures_value`, `event_contracts_value`, `mutual_funds_value`, `fixed_income_value`) for one account (needs `account_number`)
 - `get_equity_positions` - Open equity positions for one account: `symbol`, `quantity`, `average_buy_price`, `shares_available_for_sells`, `intraday_quantity`, `type` (no market price — pair with `get_equity_quotes`)
 - `get_equity_quotes` - Live quotes + official last-session close for up to ~20 symbols per call
 - `get_equity_orders` - Existing/open and historical orders (used to reconcile stops and pending trades)
 - `get_equity_tradability` - Whether a symbol is currently tradable
+
+> **Equity-only enumeration:** `get_equity_positions` lists **equities only**.
+> This MCP surface has **no** `get_option_positions` / `get_crypto_positions`
+> tool, so options, crypto, futures, etc. are visible only as the **aggregate
+> dollar values** in `get_portfolio` — never as individual contracts/lots. Report
+> those sleeves by value and % of account, flag them as **un-enumerated risk**,
+> and point the user to the Robinhood app for position-level detail.
+
+Watchlist tools (candidate tracking):
+- `get_watchlists` - List the user's watchlists (returns each list's `id` + name)
+- `get_watchlist_items` - Items in a stock/ETF/crypto/index watchlist (needs `list_id`; no live prices — pair with `get_equity_quotes`)
+- `get_options_watchlist` - The options watchlist (use this, NOT `get_watchlist_items`, for options)
+- `get_popular_lists` - Curated/popular lists the user can follow
+- `add_to_watchlist` / `remove_from_watchlist` / `create_watchlist` / `update_watchlist` - Modify watchlists (writes — confirm before calling)
+- `add_option_to_watchlist` / `remove_option_from_watchlist` - Modify the options watchlist (writes — confirm)
 
 Order tools (confirm-first execution only):
 - `review_equity_order` - Dry-run preview of an order without placing it
@@ -166,11 +182,27 @@ Analyze current allocation across multiple dimensions:
 
 **By Geography:** US vs International vs Emerging Markets; domestic concentration risk.
 
+Always lead with the **multi-asset sleeve breakdown** from `get_portfolio`, so
+non-equity sleeves are never silently dropped. Mark which sleeves this skill can
+analyze at the position level (equities + cash) versus aggregate-only (options,
+crypto, futures, …).
+
 **Output Format:**
 ```markdown
 ## Asset Allocation
 
-### Current Allocation vs Target
+### Sleeve Breakdown (from get_portfolio)
+| Sleeve | Value | Weight | Position-level detail? |
+|--------|-------|--------|------------------------|
+| Equities | $XX,XXX | XX.X% | ✅ enumerated below |
+| Cash | $XX,XXX | XX.X% | ✅ (buying power: $X) |
+| Options | $XX,XXX | XX.X% | ❌ aggregate only — not in MCP; see Robinhood app |
+| Crypto | $XX,XXX | XX.X% | ❌ aggregate only — not in MCP; see Robinhood app |
+
+> Flag any aggregate-only sleeve >10% as **un-enumerated risk** — its leverage,
+> direction, and expiries are invisible to this skill and can dominate account risk.
+
+### Current Equity Allocation vs Target
 | Asset Class | Current | Target | Variance |
 |-------------|---------|--------|----------|
 | US Equities | XX.X% | YY.Y% | +/- Z.Z% |
@@ -424,6 +456,29 @@ agent-placed orders.
 **Confirm to place this single order?** (yes / no)
 ```
 
+### Step 8: Watchlist Integration (Optional)
+
+Use Robinhood watchlists to connect analysis to a tracked candidate pipeline.
+Reads are free; **writes (add/remove/create/update) modify the user's data — confirm
+before each write**, even though they place no orders.
+
+**8.1 Read watchlists to inform analysis:**
+- `get_watchlists` → the user's lists (each with an `id`); `get_watchlist_items`
+  (per `list_id`) → tracked symbols. Use `get_equity_quotes` for prices (items carry none).
+- `get_options_watchlist` for tracked option contracts (do **not** use
+  `get_watchlist_items` for options — wrong shape, the upstream 400s).
+- Cross-reference watchlist names against current holdings: flag tracked names that
+  could fill diversification gaps from Step 5, and holdings you may be exiting.
+
+**8.2 Stage rebalancing candidates (confirm-first write):**
+- After Step 5, offer to add suggested replacement / diversifier names to a
+  watchlist via `add_to_watchlist` (`symbols=[…]`, `list_id=…`) or a new
+  `create_watchlist`. Present the exact list + symbols and get a yes before writing.
+- `remove_from_watchlist` to clear names you've exited or rejected — confirm first.
+
+> Watchlist writes are low-stakes (no money) but still mutate the user's account
+> data; never batch-add speculatively without showing the list first.
+
 ## Analysis Frameworks
 
 ### Target Allocation Templates
@@ -482,3 +537,5 @@ Load these references as needed during analysis:
 *This analysis is for informational purposes only and does not constitute financial advice. Investment decisions should be made based on individual circumstances, risk tolerance, and financial goals. Past performance does not guarantee future results. Consult a qualified financial advisor before making investment decisions.*
 
 *Robinhood accounts are real-money accounts with no paper/simulated mode. All order execution is manual and confirm-first; this skill never auto-executes or batches orders. Data accuracy depends on the Robinhood MCP server and third-party market data; verify critical information independently. Tax implications are estimates only; consult a tax professional.*
+
+*This skill enumerates equity positions only. Options, crypto, futures, and other non-equity sleeves are visible solely as aggregate dollar values from `get_portfolio` — their position-level detail (contracts, strikes, expiries, lots) is not available through this MCP surface and is therefore excluded from position-level analysis. Review those sleeves in the Robinhood app.*
