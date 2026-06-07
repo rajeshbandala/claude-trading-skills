@@ -106,6 +106,7 @@ def tmp_claude_md(tmp_path):
         | **Free Skill** | ❌ Not required | ❌ Not used | ❌ Not used | No API needed |
         | **Optional Skill** | 🟡 Optional | 🟡 Optional (Recommended) | ❌ Not used | Both optional |
         | **Alpaca Skill** | ❌ Not required | ❌ Not used | ✅ Required | Needs Alpaca |
+        | **Robinhood Skill** | ❌ Not used | ❌ Not used | ❌ Not used | Robinhood brokerage MCP |
 
         ### Running Helper Scripts
 
@@ -181,6 +182,14 @@ class TestParseApiRequirements:
         assert "alpaca-skill" in reqs
         assert "Required" in reqs["alpaca-skill"]["alpaca"]
 
+    def test_robinhood_derived_from_notes(self, tmp_claude_md):
+        # The matrix has no Robinhood column; the requirement is surfaced in the
+        # Notes column and derived into a `robinhood` Required flag.
+        reqs = parse_api_requirements(tmp_claude_md)
+        assert "robinhood-skill" in reqs
+        assert reqs["robinhood-skill"]["robinhood"] == "Required"
+        assert reqs["test-skill"]["robinhood"] == ""
+
 
 class TestParseCLIExamples:
     def test_extracts_code_block(self, tmp_claude_md):
@@ -212,6 +221,13 @@ class TestApiBadges:
         badges = api_badges({"fmp": "❌", "finviz": "❌", "alpaca": "✅ Required"})
         assert "Alpaca Required" in badges
 
+    def test_robinhood_required(self):
+        badges = api_badges({"fmp": "❌", "finviz": "❌", "alpaca": "❌", "robinhood": "Required"})
+        assert "badge-api" in badges
+        assert "Robinhood Required" in badges
+        # A broker-required skill must not be mislabeled as free.
+        assert "No API" not in badges
+
 
 class TestApiBadgesJa:
     def test_no_api_ja(self):
@@ -221,6 +237,13 @@ class TestApiBadgesJa:
         badges = api_badges_ja({"fmp": "✅ Required", "finviz": "❌", "alpaca": "❌"})
         assert "FMP必須" in badges
         assert "badge-api" in badges
+
+    def test_robinhood_required_ja(self):
+        badges = api_badges_ja(
+            {"fmp": "❌", "finviz": "❌", "alpaca": "❌", "robinhood": "Required"}
+        )
+        assert "Robinhood必須" in badges
+        assert "API不要" not in badges
 
     def test_optional_ja(self):
         badges = api_badges_ja({"fmp": "🟡 Optional", "finviz": "🟡 Optional", "alpaca": "❌"})
