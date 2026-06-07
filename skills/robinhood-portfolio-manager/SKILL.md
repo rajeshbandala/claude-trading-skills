@@ -134,6 +134,24 @@ missing); position weight = market value ÷ `total_value`.
 > report that time-weighted historical return / drawdown is unavailable from the
 > live feed. If the user wants historical return, ask them to supply it manually.
 
+**1.4 Look at the options sleeve (and other non-equity sleeves):**
+Whenever `get_portfolio` reports a non-zero `options_value` (or `crypto_value`,
+`futures_value`, …), explicitly surface it instead of silently dropping it:
+- Report the **aggregate dollar value and % of account** from `get_portfolio`.
+- Call `get_options_watchlist` to list any **tracked single-leg option contracts**
+  (each item's `name`, e.g. "Long Call AAPL Jan 2026 $200", and `option_ids`).
+  This is a **watchlist, not holdings** — and multi-leg strategies are not shown.
+- **Held option positions/orders cannot be enumerated** on this MCP surface (there
+  is no `get_option_positions` / `get_option_orders`). State this plainly and point
+  the user to the Robinhood app for contract-level detail (strikes, expiries, P&L).
+  *If the environment exposes `get_option_quotes` / `review_option_order` /
+  `place_option_order`, those work on individual `option_ids` (e.g. from the
+  watchlist) but still do not list current holdings.*
+- **Flag any aggregate-only sleeve >10% of the account as un-enumerated risk** — its
+  leverage, direction, and expiries are invisible and may dominate account risk.
+- Empty options watchlist + `options_value > 0` is normal: it means the user holds
+  options they haven't watchlisted; the value is real but the legs are app-only.
+
 **Data Validation:**
 - Verify all positions have valid ticker symbols and that every held symbol got a quote
 - Confirm computed market values + `cash` sum to approximately `total_value`

@@ -88,11 +88,17 @@ All read tools return a `{"data": {...}, "guide": "..."}` envelope — read from
 > labels it accordingly.
 
 > **Equities are the only enumerable positions.** There is **no**
-> `get_option_positions` / `get_crypto_positions` tool on this surface. Options,
-> crypto, futures, etc. appear only as **aggregate dollar values** in
-> `get_portfolio` (`options_value`, `crypto_value`, …) — the skill reports those
-> sleeves by value and % of account and flags them as un-enumerated risk, then
-> points the user to the Robinhood app for contract/lot-level detail.
+> `get_option_positions` / `get_option_orders` / `get_crypto_positions` tool on
+> this surface. Options, crypto, futures, etc. appear only as **aggregate dollar
+> values** in `get_portfolio` (`options_value`, `crypto_value`, …) — the skill
+> reports those sleeves by value and % of account, surfaces any tracked contracts
+> via `get_options_watchlist`, flags sleeves >10% as un-enumerated risk, and points
+> the user to the Robinhood app for contract/lot-level detail.
+>
+> Some environments additionally expose `get_option_quotes` / `review_option_order`
+> / `place_option_order`, which operate on individual `option_ids` (e.g. from the
+> options watchlist). They are **environment-dependent** and still do **not** list
+> current option holdings — treat them as optional and never assume their presence.
 
 ## Verification and Testing
 
