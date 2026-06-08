@@ -838,6 +838,32 @@
       "timeframe": "event-driven"
     },
     {
+      "category": "core-portfolio",
+      "difficulty": "advanced",
+      "display_name": "Trading Desk Operator",
+      "id": "trading-desk-operator",
+      "integrations": [
+        {
+          "id": "robinhood",
+          "requirement": "required",
+          "type": "broker"
+        },
+        {
+          "id": "slack",
+          "requirement": "optional",
+          "type": "mcp"
+        },
+        {
+          "id": "websearch",
+          "requirement": "required",
+          "type": "web"
+        }
+      ],
+      "status": "production",
+      "summary": "Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist, posting a numbers-first briefing to Slack each cycle. Reads the watchlist and book from all accounts and discovers fresh candidates from news + technicals (gated to S&P 500 constituents), but places real orders only on the agentic-allowed account through a confirm-first gate (optional bounded auto-execution).",
+      "timeframe": "daily"
+    },
+    {
       "category": "meta",
       "difficulty": "beginner",
       "display_name": "Trading Skills Navigator",

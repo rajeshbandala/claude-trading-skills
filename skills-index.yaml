@@ -1026,6 +1026,39 @@ skills:
   - swing-opportunity-daily
   - trade-memory-loop
   - monthly-performance-review
+- id: trading-desk-operator
+  display_name: Trading Desk Operator
+  category: core-portfolio
+  status: production
+  summary: Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist,
+    posting a numbers-first briefing to Slack each cycle. Reads the watchlist and book from all accounts
+    and discovers fresh candidates from news + technicals (gated to S&P 500 constituents), but places
+    real orders only on the agentic-allowed account through a confirm-first gate (optional bounded
+    auto-execution).
+  timeframe: daily
+  difficulty: advanced
+  integrations:
+  - id: robinhood
+    type: broker
+    requirement: required
+    note: Robinhood brokerage MCP (book + watchlist reads; orders on the agentic account only)
+  - id: slack
+    type: mcp
+    requirement: optional
+    note: Posts the cycle briefing to a Slack channel (e.g. #trading)
+  - id: websearch
+    type: web
+    requirement: required
+    note: Market regime, per-name news, and live S&P 500 membership verification
+  inputs:
+  - robinhood_watchlist
+  - robinhood_book
+  - sp500_universe
+  outputs:
+  - desk_briefing
+  - ranked_setups
+  - bracket_orders
+  workflows: []
 - id: trading-skills-navigator
   display_name: Trading Skills Navigator
   category: meta
