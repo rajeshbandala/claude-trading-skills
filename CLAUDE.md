@@ -270,7 +270,7 @@ The table below is **auto-generated** from `skills-index.yaml` by `scripts/gener
 | **Trade Hypothesis Ideator** | ❌ Not used | ❌ Not used | ❌ Not used | Hypothesis generation from journal/data inputs; pure calculation |
 | **Trade Performance Coach** | ❌ Not used | ❌ Not used | ❌ Not used | Works from local trader-memory / postmortem / journal records; no network or paid API required |
 | **Trader Memory Core** | 🟡 Optional | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
-| **Trading Desk Operator** | ❌ Not used | ❌ Not used | ❌ Not used | Robinhood brokerage MCP (book + watchlist reads; orders on the agentic account only); Posts the cycle briefing to a Slack channel (e.g.; Market regime and per-name news |
+| **Trading Desk Operator** | ❌ Not used | ❌ Not used | ❌ Not used | Robinhood brokerage MCP (book + watchlist reads; orders on the agentic account only); Posts the cycle briefing to a Slack channel (e.g.; Market regime, per-name news, and live S&P 500 membership verification |
 | **Trading Skills Navigator** | ❌ Not used | ❌ Not used | ❌ Not used | Reads local skills-index.yaml + workflows/*.yaml (or bundled snapshot); no network |
 | **US Market Bubble Detector** | ❌ Not used | ❌ Not used | ❌ Not used | User provides indicators |
 | **US Stock Analysis** | ❌ Not used | ❌ Not used | ❌ Not used | User provides data |

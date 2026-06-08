@@ -1,6 +1,6 @@
 ---
 name: trading-desk-operator
-description: Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist, posting a clean briefing to Slack each cycle. Pulls the watchlist and book from ALL accounts (read-only) but manages risk and places REAL orders only on the agentic-allowed account through a confirm-first gate (with an optional bounded auto-execution mode). Use when the user says "run the desk", asks for a pre-market/midday/power-hour/end-of-day/weekly trading cycle, wants risk-based sizing and bracket orders, position management with stops, or a ranked setup briefing for their Robinhood watchlist.
+description: Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist, posting a clean briefing to Slack each cycle. Pulls the watchlist and book from ALL accounts (read-only) AND discovers fresh candidates from news + technical analysis (gated to S&P 500 constituents), then manages risk and places REAL orders only on the agentic-allowed account through a confirm-first gate (with an optional bounded auto-execution mode). Use when the user says "run the desk", asks for a pre-market/midday/power-hour/end-of-day/weekly trading cycle, wants risk-based sizing and bracket orders, position management with stops, stock ideas beyond the watchlist, or a ranked setup briefing for their Robinhood account.
 ---
 
 # Trading Desk Operator
@@ -36,6 +36,7 @@ exists but is **off unless the user explicitly turns it on** with hard limits
 ## When to Use
 
 - "Run the desk" / "run my pre-market (or midday / power-hour / EOD / weekly) cycle"
+- "Find me some setups / stock ideas beyond my watchlist" (S&P 500, news + technicals)
 - "Analyze my watchlist and propose trades on my agentic account"
 - "Size this trade by risk with a stop and target"
 - "Manage my positions — where are my stops?"
@@ -116,12 +117,27 @@ see which positions already have **protective stops** — flag any naked positio
   > swing-low precision are limited. State this; lean on round-number support,
   > prior closes, and any chart the user provides, and label level reads as
   > approximate rather than implying MA precision.
+- **D. Discover beyond the watchlist (S&P 500 only).** Don't limit candidates to
+  the watchlist — surface fresh names from **news catalysts** (gainers, upgrades,
+  earnings beats, sector tailwinds via WebSearch) and **technical strength** (new
+  highs, breakouts, relative strength). Every discovered name must be a **current
+  S&P 500 constituent** — run the membership gate and confirm `unverified` names
+  live via WebSearch before including them:
+  ```bash
+  python3 skills/trading-desk-operator/scripts/sp500_filter.py \
+    --tickers "NVDA,UBER,SOFI,JPM" --as-of <today> --output-dir reports/
+  ```
+  Read `references/candidate-discovery.md` for the full method. Watchlist names the
+  user explicitly tracks are exempt from the S&P 500 gate; the gate applies to
+  **discovered** candidates only.
 
 ### Step 5 — Rank and size (executing account)
 
-Rank candidates on trend alignment, setup cleanliness, risk/reward (target ≥ 2R),
-catalyst, and liquidity. Present the **top few only**. For each candidate, size
-against the **executing account** with the risk engine:
+Rank the **combined universe** — watchlist ∪ confirmed-S&P-500 discovered
+candidates — on trend alignment, setup cleanliness, risk/reward (target ≥ 2R),
+catalyst, and liquidity. Present the **top few only**, and mark each setup's origin
+(`watchlist` or `discovered`). For each candidate, size against the **executing
+account** with the risk engine:
 
 ```bash
 python3 skills/trading-desk-operator/scripts/desk_risk.py size \
@@ -198,6 +214,13 @@ Save a cycle report to `reports/` with a date stamp.
 - `scripts/desk_risk.py` — offline risk engine: `size` (whole-share + fractional
   sizing, 2R target, BP / max-risk guards) and `stops` (stop sheet + portfolio
   heat, auto-stop fill, winner-locks-gain flag).
+- `scripts/sp500_filter.py` — S&P 500 membership gate for discovered candidates;
+  splits tickers into `in_sp500` / `unverified` against the bundled snapshot and
+  flags staleness (WebSearch stays authoritative).
+- `assets/sp500_constituents.json` — S&P 500 constituents snapshot (cache, with
+  `as_of`; refresh when stale).
+- `references/candidate-discovery.md` — news + technical discovery method and the
+  mandatory S&P 500 gate for non-watchlist picks.
 - `references/risk-management.md` — risk rules: per-trade %, heat cap, daily/weekly
   loss limits, concentration, stop placement, net-exposure ceiling by regime.
 - `references/execution-protocol.md` — confirm-first gate, executing-account-only
@@ -210,6 +233,9 @@ Save a cycle report to `reports/` with a date stamp.
 
 - Capital preservation before profit. When in doubt, smaller or flat.
 - Execute only on the `agentic_allowed` account; everything else is advisory.
+- **Discovered (non-watchlist) candidates must be confirmed S&P 500 constituents** —
+  run the membership gate and verify `unverified`/stale names live via WebSearch
+  before proposing them. Watchlist names the user tracks are exempt.
 - No new entries through earnings unless the user asked for the event trade.
 - No order without `review_equity_order` + explicit confirmation (unless bounded
   auto-execution is explicitly enabled with limits).

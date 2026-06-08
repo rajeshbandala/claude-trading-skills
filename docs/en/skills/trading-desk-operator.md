@@ -12,11 +12,12 @@ generated: true
 # Trading Desk Operator
 {: .no_toc }
 
-Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist, posting a clean briefing to Slack each cycle. Pulls the watchlist and book from ALL accounts (read-only) but manages risk and places REAL orders only on the agentic-allowed account through a confirm-first gate (with an optional bounded auto-execution mode). Use when the user says "run the desk", asks for a pre-market/midday/power-hour/end-of-day/weekly trading cycle, wants risk-based sizing and bracket orders, position management with stops, or a ranked setup briefing for their Robinhood watchlist.
+Run a disciplined, risk-first equities trading desk over a Robinhood (MCP) book and watchlist, posting a clean briefing to Slack each cycle. Pulls the watchlist and book from ALL accounts (read-only) AND discovers fresh candidates from news + technical analysis (gated to S&P 500 constituents), then manages risk and places REAL orders only on the agentic-allowed account through a confirm-first gate (with an optional bounded auto-execution mode). Use when the user says "run the desk", asks for a pre-market/midday/power-hour/end-of-day/weekly trading cycle, wants risk-based sizing and bracket orders, position management with stops, stock ideas beyond the watchlist, or a ranked setup briefing for their Robinhood account.
 {: .fs-6 .fw-300 }
 
 <span class="badge badge-api">Robinhood Required</span>
 
+[Download Skill Package (.skill)](https://github.com/tradermonty/claude-trading-skills/raw/main/skill-packages/trading-desk-operator.skill){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View Source on GitHub](https://github.com/tradermonty/claude-trading-skills/tree/main/skills/trading-desk-operator){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 <details open markdown="block">
@@ -61,6 +62,7 @@ exists but is **off unless the user explicitly turns it on** with hard limits
 ## 2. When to Use
 
 - "Run the desk" / "run my pre-market (or midday / power-hour / EOD / weekly) cycle"
+- "Find me some setups / stock ideas beyond my watchlist" (S&P 500, news + technicals)
 - "Analyze my watchlist and propose trades on my agentic account"
 - "Size this trade by risk with a stop and target"
 - "Manage my positions — where are my stops?"
@@ -95,9 +97,8 @@ read the book or place orders without it.
 ## 4. Quick Start
 
 ```bash
-python3 skills/trading-desk-operator/scripts/desk_risk.py size \
-  --account-equity 500 --entry 94.6 --stop 88.0 \
-  --risk-pct 1.0 --max-risk-pct 2.0 --target-r 2.0 --output-dir reports/
+python3 skills/trading-desk-operator/scripts/sp500_filter.py \
+    --tickers "NVDA,UBER,SOFI,JPM" --as-of <today> --output-dir reports/
 ```
 
 ---
@@ -155,12 +156,27 @@ see which positions already have **protective stops** — flag any naked positio
   > swing-low precision are limited. State this; lean on round-number support,
   > prior closes, and any chart the user provides, and label level reads as
   > approximate rather than implying MA precision.
+- **D. Discover beyond the watchlist (S&P 500 only).** Don't limit candidates to
+  the watchlist — surface fresh names from **news catalysts** (gainers, upgrades,
+  earnings beats, sector tailwinds via WebSearch) and **technical strength** (new
+  highs, breakouts, relative strength). Every discovered name must be a **current
+  S&P 500 constituent** — run the membership gate and confirm `unverified` names
+  live via WebSearch before including them:
+  ```bash
+  python3 skills/trading-desk-operator/scripts/sp500_filter.py \
+    --tickers "NVDA,UBER,SOFI,JPM" --as-of <today> --output-dir reports/
+  ```
+  Read `references/candidate-discovery.md` for the full method. Watchlist names the
+  user explicitly tracks are exempt from the S&P 500 gate; the gate applies to
+  **discovered** candidates only.
 
 ### Step 5 — Rank and size (executing account)
 
-Rank candidates on trend alignment, setup cleanliness, risk/reward (target ≥ 2R),
-catalyst, and liquidity. Present the **top few only**. For each candidate, size
-against the **executing account** with the risk engine:
+Rank the **combined universe** — watchlist ∪ confirmed-S&P-500 discovered
+candidates — on trend alignment, setup cleanliness, risk/reward (target ≥ 2R),
+catalyst, and liquidity. Present the **top few only**, and mark each setup's origin
+(`watchlist` or `discovered`). For each candidate, size against the **executing
+account** with the risk engine:
 
 ```bash
 python3 skills/trading-desk-operator/scripts/desk_risk.py size \
@@ -232,6 +248,7 @@ Save a cycle report to `reports/` with a date stamp.
 **References:**
 
 - `skills/trading-desk-operator/references/cadence-playbook.md`
+- `skills/trading-desk-operator/references/candidate-discovery.md`
 - `skills/trading-desk-operator/references/execution-protocol.md`
 - `skills/trading-desk-operator/references/risk-management.md`
 - `skills/trading-desk-operator/references/slack-briefing-format.md`
@@ -239,3 +256,4 @@ Save a cycle report to `reports/` with a date stamp.
 **Scripts:**
 
 - `skills/trading-desk-operator/scripts/desk_risk.py`
+- `skills/trading-desk-operator/scripts/sp500_filter.py`
